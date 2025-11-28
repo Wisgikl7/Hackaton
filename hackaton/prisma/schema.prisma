@@ -25,6 +25,7 @@ model User {
   
   // Relación con visitas autorizadas
   visitasAutorizadas Visit[] @relation("Autorizante")
+  visitasCargadas Visit[] @relation("Recepcionista")
 }
 
 // Enum para roles de usuario
@@ -52,6 +53,7 @@ model Visit {
   
   // Relaciones
   autorizante         User     @relation("Autorizante", fields: [autorizanteId], references: [id])
+  recepcionista         User?     @relation("Recepcionista", fields: [recepcionistaId], references: [id])
   
   @@index([autorizanteId])
   @@index([estado])
@@ -62,7 +64,9 @@ model Visit {
 // Enum para estados de visita
 enum VisitStatus {
   PRE_AUTORIZADA
+  PENDIENTE_VALIDACION
   EN_RECEPCION
   APROBADA
+  FINALIZADA
   RECHAZADA
 }

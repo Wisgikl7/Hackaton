@@ -250,6 +250,199 @@ export class MailService {
     `;
   }
 
+  async sendPendingNotification(
+    autorizanteEmail: string,
+    autorizanteName: string,
+    nombreVisitante: string,
+    fechaHoraLlegada: Date,
+    visitaId: string,
+    recepcionistaName: string,
+  ): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn(
+        `📧 [SIMULADO] Email de visita pendiente de validar a ${autorizanteEmail} (${autorizanteName}) para visitante ${nombreVisitante}`,
+      );
+      return;
+    }
+
+    try {
+      const mailOptions = {
+        from: this.configService.get<string>(
+          'MAIL_FROM',
+          'noreply@visitas.com',
+        ),
+        to: autorizanteEmail,
+        subject: '🔔 Visitante en Recepción - Requiere Validación',
+        html: this.getPendingEmailTemplate(
+          autorizanteName,
+          nombreVisitante,
+          fechaHoraLlegada,
+          visitaId,
+          recepcionistaName
+        ),
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`✅ Email de validación enviado a ${autorizanteEmail}`);
+
+      const previewUrl = nodemailer.getTestMessageUrl(mailOptions as any);
+      if (previewUrl) {
+        this.logger.log(`🔗 Ver email en: ${previewUrl}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `❌ Error al enviar email a ${autorizanteEmail}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  private getPendingEmailTemplate(
+    autorizanteName: string,
+    nombreVisitante: string,
+    fechaHoraLlegada: Date,
+    visitaId: string,
+    recepcionistaName: string,
+  ): string {
+    const horaLlegada = fechaHoraLlegada.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const fechaLlegada = fechaHoraLlegada.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const logoUrl = this.configService.get<string>(
+      'MAIL_LOGO_URL',
+      'https://politicacordobaverdad.com.ar/wp-content/uploads/2025/03/logo-loteria-de-cordoba.jpg',
+    );
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+          }
+          .logo {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .logo img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 8px;
+          }
+          .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+          }
+          .content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          .info-box {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+          }
+          .info-label {
+            font-weight: bold;
+            color: #2e7d32;
+          }
+          .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            font-weight: bold;
+          }
+          .button-reject {
+            background-color: #f44336;
+          }
+          .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">
+            <img src="${logoUrl}" alt="Logo Sistema de Visitas" />
+          </div>
+          
+          <div class="header">
+            <h1>🔔 Visitante en Recepción</h1>
+          </div>
+          
+          <div class="content">
+            <p>Hola <strong>${autorizanteName}</strong>,</p>
+            
+            <p>El recepcionista ${recepcionistaName} informa que un visitante ha llegado sin previa autorización y está esperando en recepción:</p>
+            
+            <div class="info-box">
+              <p><span class="info-label">👤 Visitante:</span> ${nombreVisitante}</p>
+              <p><span class="info-label">🕐 Hora de llegada:</span> ${horaLlegada}</p>
+              <p><span class="info-label">📅 Fecha:</span> ${fechaLlegada}</p>
+              <p><span class="info-label">🆔 ID de Visita:</span> ${visitaId}</p>
+            </div>
+            
+            <p><strong>⚠️ Acción requerida:</strong></p>
+            <p>Por favor, aprueba o rechaza esta visita lo antes posible.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/visitas/${visitaId}/aprobar" class="button">
+                ✅ Aprobar Visita
+              </a>
+              <a href="${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/visitas/${visitaId}/rechazar" class="button button-reject">
+                ❌ Rechazar Visita
+              </a>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Este es un mensaje automático del Sistema de Gestión de Visitas.</p>
+            <p>Por favor, no respondas a este correo.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   async sendApprovedNotification(
     autorizanteEmail: string,
     nombreVisitante: string,

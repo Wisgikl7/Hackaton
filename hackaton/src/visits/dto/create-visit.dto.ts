@@ -24,4 +24,8 @@ export class CreateVisitDto {
   @IsUUID()
   @IsOptional()
   autorizanteId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  recepcionistaId?: string;
 }

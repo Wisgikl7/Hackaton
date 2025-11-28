@@ -4,6 +4,7 @@ import {
   VisitCheckInEvent,
   VisitApprovedEvent,
   VisitRejectedEvent,
+  VisitPendingEvent
 } from '../events';
 import { MailService } from '../../mail/mail.service';
 
@@ -30,6 +31,36 @@ export class VisitNotificationsListener {
         event.nombreVisitante,
         event.fechaHoraLlegada,
         event.visitaId,
+      );
+      this.logger.log(
+        `✅ Email de check-in enviado exitosamente a ${event.autorizanteEmail}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Error al enviar email de check-in: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  @OnEvent('visit.pending')
+  async handleVisitPending(event: VisitPendingEvent) {
+    this.logger.log(`[CHECK-IN] Visitante ${event.nombreVisitante} ha llegado de forma`);
+    this.logger.log(`Visita ID: ${event.visitaId}`);
+    this.logger.log(
+      `Autorizante: ${event.autorizanteName} (${event.autorizanteEmail})`,
+    );
+    this.logger.log(`Hora de llegada: ${event.fechaHoraLlegada.toISOString()}`);
+
+    try {
+      // Enviar email inmediato al autorizante
+      await this.mailService.sendPendingNotification(
+        event.autorizanteEmail,
+        event.autorizanteName,
+        event.nombreVisitante,
+        event.fechaHoraLlegada,
+        event.visitaId,
+        event.recepcionistaName
       );
       this.logger.log(
         `✅ Email de check-in enviado exitosamente a ${event.autorizanteEmail}`,

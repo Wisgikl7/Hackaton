@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { VisitsService } from './visits.service';
+import { AuthService } from '../auth/auth.service';
 import {
   CreateVisitDto,
   CheckInVisitDto,
@@ -25,16 +26,27 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Controller('visitas')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VisitsController {
-  constructor(private readonly visitsService: VisitsService) {}
+  constructor(
+    private readonly visitsService: VisitsService,
+    private readonly userService : AuthService,
+  ) {}
 
   @Post()
-  @Roles('AUTORIZANTE', 'ADMIN')
+  @Roles('AUTORIZANTE', 'RECEPCIONISTA', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createVisit(
     @Body(ValidationPipe) createVisitDto: CreateVisitDto,
     @CurrentUser() user: any,
   ) {
-    createVisitDto.autorizanteId = user.id;
+    const userData = await this.userService.validateUser(user.id);
+    if (userData.role == "AUTORIZANTE")
+    {
+      createVisitDto.autorizanteId = user.id;
+    }
+    else if (userData.role == "RECEPCIONISTA")
+    {
+      createVisitDto.recepcionistaId = user.id;
+    }
     return this.visitsService.createVisit(createVisitDto);
   }
 

@@ -15,7 +15,9 @@ import {
   VisitCheckInEvent,
   VisitApprovedEvent,
   VisitRejectedEvent,
+  VisitPendingEvent
 } from './events';
+import { VisitStatus } from '@prisma/client';
 
 @Injectable()
 export class VisitsService {
@@ -32,6 +34,24 @@ export class VisitsService {
     if (!autorizante) {
       throw new NotFoundException('Autorizante no encontrado');
     }
+    
+    var fechaHoraLlegada = null;
+
+    if (createVisitDto.recepcionistaId != null)
+    {
+      const recepcionista = await this.prisma.user.findUnique({
+        where: {id : createVisitDto.recepcionistaId}
+      });
+
+      if (!recepcionista)
+      {
+        throw new NotFoundException('Recepcionista no encontrado');
+      }
+
+      fechaHoraLlegada = new Date();
+    }
+
+    const estado = createVisitDto.recepcionistaId == null ? VisitStatus.PRE_AUTORIZADA : VisitStatus.PENDIENTE_VALIDACION;
 
     const visit = await this.prisma.visit.create({
       data: {
@@ -40,8 +60,10 @@ export class VisitsService {
         empresa: createVisitDto.empresa,
         motivo: createVisitDto.motivo,
         fechaHoraEstimada: new Date(createVisitDto.fechaHoraEstimada),
+        fechaHoraLlegada: fechaHoraLlegada,
         autorizanteId: createVisitDto.autorizanteId,
-        estado: 'PRE_AUTORIZADA',
+        recepcionistaId : createVisitDto.recepcionistaId,
+        estado: estado,
       },
       include: {
         autorizante: {
@@ -51,8 +73,32 @@ export class VisitsService {
             email: true,
           },
         },
+        recepcionista: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
       },
     });
+
+    if (estado == VisitStatus.PENDIENTE_VALIDACION)
+    {
+      this.eventEmitter.emit(
+        'visit.pending',
+        new VisitPendingEvent(
+          visit.id,
+          visit.autorizanteId,
+          visit.autorizante.email,
+          visit.autorizante.name,
+          visit.nombreVisitante,
+          fechaHoraLlegada,
+          visit.recepcionistaId,
+          visit.recepcionista.name
+        ),
+      );
+    }
 
     return visit;
   }
