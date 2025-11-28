@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { VisitsService } from './visits.service';
-import { CreateVisitDto, CheckInVisitDto, QueryVisitsDto } from './dto';
+import { CreateVisitDto, CheckInVisitDto, QueryVisitsDto, RejectVisitDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -117,10 +117,11 @@ export class VisitsController {
   @HttpCode(HttpStatus.OK)
   async rejectVisit(
     @Param('id') id: string,
+    @Body(ValidationPipe) rejectDto: RejectVisitDto,
     @CurrentUser() user: any,
   ) {
     // TODO: Verificar que el usuario sea el autorizante de la visita
-    return this.visitsService.rejectVisit(id);
+    return this.visitsService.rejectVisit(id, rejectDto);
   }
 }
 

@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { VisitCheckInEvent, VisitApprovedEvent, VisitRejectedEvent } from '../events';
+import {
+  VisitCheckInEvent,
+  VisitApprovedEvent,
+  VisitRejectedEvent,
+} from '../events';
 import { MailService } from '../../mail/mail.service';
 
 @Injectable()
@@ -9,15 +13,13 @@ export class VisitNotificationsListener {
 
   constructor(private readonly mailService: MailService) {}
 
-  /**
-   * Listener para evento de check-in
-   * Envía email inmediato al autorizante
-   */
   @OnEvent('visit.checkin')
   async handleVisitCheckIn(event: VisitCheckInEvent) {
     this.logger.log(`[CHECK-IN] Visitante ${event.nombreVisitante} ha llegado`);
     this.logger.log(`Visita ID: ${event.visitaId}`);
-    this.logger.log(`Autorizante: ${event.autorizanteName} (${event.autorizanteEmail})`);
+    this.logger.log(
+      `Autorizante: ${event.autorizanteName} (${event.autorizanteEmail})`,
+    );
     this.logger.log(`Hora de llegada: ${event.fechaHoraLlegada.toISOString()}`);
 
     try {
@@ -29,45 +31,53 @@ export class VisitNotificationsListener {
         event.fechaHoraLlegada,
         event.visitaId,
       );
-      this.logger.log(`✅ Email de check-in enviado exitosamente a ${event.autorizanteEmail}`);
+      this.logger.log(
+        `✅ Email de check-in enviado exitosamente a ${event.autorizanteEmail}`,
+      );
     } catch (error) {
       this.logger.error(
         `❌ Error al enviar email de check-in: ${error.message}`,
         error.stack,
       );
-      // No lanzamos el error para no bloquear el flujo
     }
   }
 
-  /**
-   * Listener para evento de aprobación
-   */
   @OnEvent('visit.approved')
   async handleVisitApproved(event: VisitApprovedEvent) {
     this.logger.log(`[APROBADA] Visita de ${event.nombreVisitante} aprobada`);
     this.logger.log(`Visita ID: ${event.visitaId}`);
     this.logger.log(`Autorizante ID: ${event.autorizanteId}`);
 
-    // TODO: Notificar a recepción sobre la aprobación
     await this.simulateNotificationSending(event);
   }
 
-  /**
-   * Listener para evento de rechazo
-   */
   @OnEvent('visit.rejected')
   async handleVisitRejected(event: VisitRejectedEvent) {
     this.logger.log(`[RECHAZADA] Visita de ${event.nombreVisitante} rechazada`);
     this.logger.log(`Visita ID: ${event.visitaId}`);
-    this.logger.log(`Autorizante ID: ${event.autorizanteId}`);
+    this.logger.log(`Autorizante: ${event.autorizanteName}`);
+    this.logger.log(`Razón: ${event.razon}`);
 
-    // TODO: Notificar a recepción sobre el rechazo
-    await this.simulateNotificationSending(event);
+    if (event.recepcionistaId) {
+      try {
+        await this.mailService.sendRejectionToReceptionist(
+          event.recepcionistaId,
+          event.nombreVisitante,
+          event.autorizanteName,
+          event.razon,
+        );
+        this.logger.log(`✅ Email de rechazo enviado al recepcionista`);
+      } catch (error) {
+        this.logger.error(
+          `❌ Error al enviar email de rechazo: ${error.message}`,
+          error.stack,
+        );
+      }
+    } else {
+      this.logger.warn('⚠️  No hay recepcionista asignado, no se envió email');
+    }
   }
 
-  /**
-   * Método auxiliar para simular envío de notificaciones
-   */
   private async simulateNotificationSending(event: any): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {

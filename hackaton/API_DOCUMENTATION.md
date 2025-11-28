@@ -198,6 +198,13 @@ GET /agenda/visitas?estado=PRE_AUTORIZADA,EN_RECEPCION
 
 **POST** `/visitas/{id}/rechazar`
 
+**Request Body**:
+```json
+{
+  "razon": "El visitante no tiene cita programada para hoy"
+}
+```
+
 **Response**: `200 OK`
 ```json
 {
@@ -208,6 +215,23 @@ GET /agenda/visitas?estado=PRE_AUTORIZADA,EN_RECEPCION
 ```
 
 **Evento Emitido**: `visit.rejected`
+```typescript
+{
+  visitaId: string,
+  autorizanteId: string,
+  autorizanteName: string,
+  autorizanteEmail: string,
+  nombreVisitante: string,
+  razon: string,
+  recepcionistaId: string | null
+}
+```
+
+**Email enviado**: Se envía un email al recepcionista con:
+- ✉️ Asunto: "❌ Visita Rechazada por Autorizante"
+- 👤 Nombre del visitante
+- 🙅 Nombre del autorizante que rechazó
+- 📝 Razón del rechazo
 
 ---
 

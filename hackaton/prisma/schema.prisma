@@ -46,6 +46,7 @@ model Visit {
   autorizanteId       String
   estado              VisitStatus @default(PRE_AUTORIZADA)
   recepcionistaId     String?
+  razonRechazo        String?  // Razón del rechazo si estado es RECHAZADA
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   

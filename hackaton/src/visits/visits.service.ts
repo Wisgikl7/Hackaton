@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateVisitDto, CheckInVisitDto, QueryVisitsDto } from './dto';
+import { CreateVisitDto, CheckInVisitDto, QueryVisitsDto, RejectVisitDto } from './dto';
 import {
   VisitCheckInEvent,
   VisitApprovedEvent,
@@ -235,7 +235,7 @@ export class VisitsService {
   /**
    * RF-BE 6 – Rechazo
    */
-  async rejectVisit(visitId: string) {
+  async rejectVisit(visitId: string, rejectDto: RejectVisitDto) {
     const visit = await this.prisma.visit.findUnique({
       where: { id: visitId },
       include: {
@@ -257,6 +257,7 @@ export class VisitsService {
       where: { id: visitId },
       data: {
         estado: 'RECHAZADA',
+        razonRechazo: rejectDto.razon,
       },
       include: {
         autorizante: {
@@ -269,13 +270,17 @@ export class VisitsService {
       },
     });
 
-    // Emitir evento
+    // Emitir evento con razón del rechazo
     this.eventEmitter.emit(
       'visit.rejected',
       new VisitRejectedEvent(
         updatedVisit.id,
         updatedVisit.autorizanteId,
+        updatedVisit.autorizante.name,
+        updatedVisit.autorizante.email,
         updatedVisit.nombreVisitante,
+        rejectDto.razon,
+        updatedVisit.recepcionistaId,
       ),
     );
 
