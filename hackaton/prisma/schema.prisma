@@ -26,6 +26,7 @@ model User {
   // Relación con visitas autorizadas
   visitasAutorizadas Visit[] @relation("Autorizante")
   visitasCargadas Visit[] @relation("Recepcionista")
+  activityLogs ActivityLog[]
 }
 
 // Enum para roles de usuario
@@ -69,4 +70,27 @@ enum VisitStatus {
   APROBADA
   FINALIZADA
   RECHAZADA
+}
+
+// Modelo de Activity Log
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String   // Acción realizada (GET, POST, PUT, DELETE)
+  endpoint    String   // Endpoint consultado
+  method      String   // Método HTTP
+  statusCode  Int      // Código de respuesta HTTP
+  ip          String?  // IP del cliente
+  userAgent   String?  // User agent del navegador
+  description String?  // Descripción opcional de la acción
+  metadata    Json?    // Datos adicionales en formato JSON
+  createdAt   DateTime @default(now())
+  
+  // Relación con usuario
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([action])
+  @@index([endpoint])
+  @@index([createdAt])
 }
