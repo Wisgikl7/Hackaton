@@ -13,11 +13,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Ejemplo de modelo - puedes modificarlo según tus necesidades
+// Modelo de Usuario/Autorizante
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   email     String   @unique
-  name      String?
+  name      String
+  password  String   // Hash de la contraseña
+  role      UserRole // Enum de roles
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relación con visitas autorizadas
+  visitasAutorizadas Visit[] @relation("Autorizante")
+}
+
+// Enum para roles de usuario
+enum UserRole {
+  AUTORIZANTE
+  RECEPCIONISTA
+  ADMIN
+}
+
+// Modelo de Visita
+model Visit {
+  id                  String   @id @default(uuid())
+  nombreVisitante     String
+  dniVisitante        String
+  empresa             String
+  motivo              String
+  fechaHoraEstimada   DateTime
+  fechaHoraLlegada    DateTime?
+  autorizanteId       String
+  estado              VisitStatus @default(PRE_AUTORIZADA)
+  recepcionistaId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relaciones
+  autorizante         User     @relation("Autorizante", fields: [autorizanteId], references: [id])
+  
+  @@index([autorizanteId])
+  @@index([estado])
+  @@index([fechaHoraEstimada])
+  @@index([dniVisitante])
+}
+
+// Enum para estados de visita
+enum VisitStatus {
+  PRE_AUTORIZADA
+  EN_RECEPCION
+  APROBADA
+  RECHAZADA
 }
