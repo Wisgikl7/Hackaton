@@ -10,6 +10,7 @@ import {
   CheckInVisitDto,
   QueryVisitsDto,
   RejectVisitDto,
+  AceptVisitPendingDto
 } from './dto';
 import {
   VisitCheckInEvent,
@@ -328,7 +329,7 @@ export class VisitsService {
     return visit;
   }
 
-  async validarVisitaPendiente(aceptar: boolean, visitId: string, razonRechazo: RejectVisitDto)
+  async validarVisitaPendiente(visitId: string, aceptPendingDto: AceptVisitPendingDto)
   {
     const visit = await this.getVisitById(visitId);
     
@@ -348,9 +349,15 @@ export class VisitsService {
       },
     });
 
-    if (!aceptar)
+    if (!aceptPendingDto.aceptar)
     {
-      await this.rejectVisit(visitId, razonRechazo)
+      var rechazo = new RejectVisitDto();
+      rechazo.razon = aceptPendingDto.razon;
+      await this.rejectVisit(visitId, rechazo)
+    }
+    else
+    {
+      // enviar notificación
     }
   }
 }

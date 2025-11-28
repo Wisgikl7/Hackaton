@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AceptVisitPendingDto } from './dto/acept-visit-pending.dto';
 
 @Controller('visitas')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -99,6 +100,17 @@ export class VisitsController {
     @CurrentUser() user: any,
   ) {
     return this.visitsService.rejectVisit(id, rejectDto);
+  }
+
+  @Post(':id/validarVisitaPendiente')
+  @Roles('AUTORIZANTE', 'ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async validarVisitaPendiente(
+    @Param('id') id: string,
+    @Body(ValidationPipe) aceptPending: AceptVisitPendingDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.visitsService.validarVisitaPendiente(id, aceptPending);
   }
 }
 
