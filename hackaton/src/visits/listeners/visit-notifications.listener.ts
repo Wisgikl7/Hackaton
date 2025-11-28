@@ -4,7 +4,8 @@ import {
   VisitCheckInEvent,
   VisitApprovedEvent,
   VisitRejectedEvent,
-  VisitPendingEvent
+  VisitPendingEvent,
+  VisitPendingApprovedEvent
 } from '../events';
 import { MailService } from '../../mail/mail.service';
 
@@ -104,6 +105,28 @@ export class VisitNotificationsListener {
       }
     } else {
       this.logger.warn('⚠️  No hay recepcionista asignado, no se envió email');
+    }
+  }
+
+  @OnEvent('visit.pending.approved')
+  async handleVisitPendingApproved(event: VisitPendingApprovedEvent) {
+    this.logger.log(`[APROBADA PENDIENTE] Visita de ${event.nombreVisitante} aprobada por ${event.autorizanteName}`);
+    this.logger.log(`Visita ID: ${event.visitaId}`);
+    this.logger.log(`Recepcionista ID: ${event.recepcionistaId}`);
+
+    try {
+      await this.mailService.sendPendingApprovedToReceptionist(
+        event.recepcionistaId,
+        event.nombreVisitante,
+        event.autorizanteName,
+        event.visitaId,
+      );
+      this.logger.log(`✅ Email de aprobación enviado al recepcionista`);
+    } catch (error) {
+      this.logger.error(
+        `❌ Error al enviar email de aprobación: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

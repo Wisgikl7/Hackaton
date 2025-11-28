@@ -29,7 +29,7 @@ import { AceptVisitPendingDto } from './dto/acept-visit-pending.dto';
 export class VisitsController {
   constructor(
     private readonly visitsService: VisitsService,
-    private readonly userService : AuthService,
+    private readonly userService: AuthService,
   ) {}
 
   @Post()
@@ -40,12 +40,9 @@ export class VisitsController {
     @CurrentUser() user: any,
   ) {
     const userData = await this.userService.validateUser(user.id);
-    if (userData.role == "AUTORIZANTE")
-    {
+    if (userData.role == 'AUTORIZANTE') {
       createVisitDto.autorizanteId = user.id;
-    }
-    else if (userData.role == "RECEPCIONISTA")
-    {
+    } else if (userData.role == 'RECEPCIONISTA') {
       createVisitDto.recepcionistaId = user.id;
     }
     return this.visitsService.createVisit(createVisitDto);

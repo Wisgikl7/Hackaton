@@ -667,4 +667,175 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendPendingApprovedToReceptionist(
+    recepcionistaId: string,
+    nombreVisitante: string,
+    autorizanteName: string,
+    visitaId: string,
+  ): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn(
+        `📧 [SIMULADO] Email de aprobación de visita pendiente al recepcionista para visitante ${nombreVisitante}`,
+      );
+      return;
+    }
+
+    try {
+      const recepcionista = await this.prisma.user.findUnique({
+        where: { id: recepcionistaId },
+        select: { email: true, name: true },
+      });
+
+      if (!recepcionista) {
+        this.logger.warn(
+          `⚠️  No se encontró el recepcionista con ID: ${recepcionistaId}`,
+        );
+        return;
+      }
+
+      const logoUrl = this.configService.get<string>(
+        'MAIL_LOGO_URL',
+        'https://politicacordobaverdad.com.ar/wp-content/uploads/2025/03/logo-loteria-de-cordoba.jpg',
+      );
+
+      const mailOptions = {
+        from: this.configService.get<string>(
+          'MAIL_FROM',
+          'noreply@visitas.com',
+        ),
+        to: recepcionista.email,
+        subject: '✅ Visita Inesperada Aprobada por Autorizante',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+              }
+              .container {
+                background-color: #f9f9f9;
+                border-radius: 10px;
+                padding: 30px;
+                border: 1px solid #e0e0e0;
+              }
+              .logo {
+                text-align: center;
+                margin-bottom: 20px;
+              }
+              .logo img {
+                max-width: 150px;
+                height: auto;
+                border-radius: 8px;
+              }
+              .header {
+                background-color: #4CAF50;
+                color: white;
+                padding: 20px;
+                border-radius: 8px;
+                text-align: center;
+                margin-bottom: 20px;
+              }
+              .header h1 {
+                margin: 0;
+                font-size: 24px;
+              }
+              .content {
+                background-color: white;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+              }
+              .info-box {
+                background-color: #e8f5e9;
+                border-left: 4px solid #4CAF50;
+                padding: 15px;
+                margin: 15px 0;
+              }
+              .info-label {
+                font-weight: bold;
+                color: #2e7d32;
+              }
+              .success-message {
+                background-color: #d4edda;
+                border: 1px solid #c3e6cb;
+                border-radius: 5px;
+                padding: 15px;
+                margin: 15px 0;
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                color: #155724;
+              }
+              .footer {
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+                margin-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="logo">
+                <img src="${logoUrl}" alt="Logo Sistema de Visitas" />
+              </div>
+              
+              <div class="header">
+                <h1>✅ Visita Aprobada</h1>
+              </div>
+              
+              <div class="content">
+                <p>Hola <strong>${recepcionista.name}</strong>,</p>
+                
+                <div class="success-message">
+                  ✅ La visita ha sido APROBADA
+                </div>
+                
+                <p>Te informamos que la visita inesperada que registraste ha sido <strong>aprobada</strong> por el autorizante:</p>
+                
+                <div class="info-box">
+                  <p><span class="info-label">👤 Visitante:</span> ${nombreVisitante}</p>
+                  <p><span class="info-label">✅ Aprobado por:</span> ${autorizanteName}</p>
+                  <p><span class="info-label">🆔 ID de Visita:</span> ${visitaId}</p>
+                </div>
+                
+                <p><strong>✅ Acción requerida:</strong></p>
+                <p>Puedes autorizar el ingreso del visitante a las instalaciones.</p>
+              </div>
+              
+              <div class="footer">
+                <p>Este es un mensaje automático del Sistema de Gestión de Visitas.</p>
+                <p>Por favor, no respondas a este correo.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(
+        `✅ Email de aprobación de visita pendiente enviado al recepcionista ${recepcionista.email}`,
+      );
+
+      const previewUrl = nodemailer.getTestMessageUrl(mailOptions as any);
+      if (previewUrl) {
+        this.logger.log(`🔗 Ver email en: ${previewUrl}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `❌ Error al enviar email al recepcionista: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

@@ -10,13 +10,14 @@ import {
   CheckInVisitDto,
   QueryVisitsDto,
   RejectVisitDto,
-  AceptVisitPendingDto
+  AceptVisitPendingDto,
 } from './dto';
 import {
   VisitCheckInEvent,
   VisitApprovedEvent,
   VisitRejectedEvent,
-  VisitPendingEvent
+  VisitPendingEvent,
+  VisitPendingApprovedEvent,
 } from './events';
 import { VisitStatus } from '@prisma/client';
 
@@ -31,29 +32,30 @@ export class VisitsService {
     const autorizante = await this.prisma.user.findUnique({
       where: { id: createVisitDto.autorizanteId },
     });
-    var recepcionista = null;
+    let recepcionista = null;
 
     if (!autorizante) {
       throw new NotFoundException('Autorizante no encontrado');
     }
-    
-    var fechaHoraLlegada = null;
 
-    if (createVisitDto.recepcionistaId != null)
-    {
-       recepcionista = await this.prisma.user.findUnique({
-        where: {id : createVisitDto.recepcionistaId}
+    let fechaHoraLlegada = null;
+
+    if (createVisitDto.recepcionistaId != null) {
+      recepcionista = await this.prisma.user.findUnique({
+        where: { id: createVisitDto.recepcionistaId },
       });
 
-      if (!recepcionista)
-      {
+      if (!recepcionista) {
         throw new NotFoundException('Recepcionista no encontrado');
       }
 
       fechaHoraLlegada = new Date();
     }
 
-    const estado = createVisitDto.recepcionistaId == null ? VisitStatus.PRE_AUTORIZADA : VisitStatus.PENDIENTE_VALIDACION;
+    const estado =
+      createVisitDto.recepcionistaId == null
+        ? VisitStatus.PRE_AUTORIZADA
+        : VisitStatus.PENDIENTE_VALIDACION;
 
     const visit = await this.prisma.visit.create({
       data: {
@@ -64,7 +66,7 @@ export class VisitsService {
         fechaHoraEstimada: new Date(createVisitDto.fechaHoraEstimada),
         fechaHoraLlegada: fechaHoraLlegada,
         autorizanteId: createVisitDto.autorizanteId,
-        recepcionistaId : createVisitDto.recepcionistaId,
+        recepcionistaId: createVisitDto.recepcionistaId,
         estado: estado,
       },
       include: {
@@ -78,8 +80,7 @@ export class VisitsService {
       },
     });
 
-    if (estado == VisitStatus.PENDIENTE_VALIDACION)
-    {
+    if (estado == VisitStatus.PENDIENTE_VALIDACION) {
       this.eventEmitter.emit(
         'visit.pending',
         new VisitPendingEvent(
@@ -90,7 +91,7 @@ export class VisitsService {
           visit.nombreVisitante,
           fechaHoraLlegada,
           visit.recepcionistaId,
-          recepcionista.name
+          recepcionista.name,
         ),
       );
     }
@@ -329,11 +330,19 @@ export class VisitsService {
     return visit;
   }
 
-  async validarVisitaPendiente(visitId: string, aceptPendingDto: AceptVisitPendingDto)
-  {
+  async validarVisitaPendiente(
+    visitId: string,
+    aceptPendingDto: AceptVisitPendingDto,
+  ) {
     const visit = await this.getVisitById(visitId);
-    
-    await this.prisma.visit.update({
+
+    if (visit.estado !== 'PENDIENTE_VALIDACION') {
+      throw new BadRequestException(
+        `No se puede validar. Estado actual: ${visit.estado}`,
+      );
+    }
+
+    const updatedVisit = await this.prisma.visit.update({
       where: { id: visit.id },
       data: {
         estado: VisitStatus.EN_RECEPCION,
@@ -349,15 +358,22 @@ export class VisitsService {
       },
     });
 
-    if (!aceptPendingDto.aceptar)
-    {
-      var rechazo = new RejectVisitDto();
+    if (!aceptPendingDto.aceptar) {
+      let rechazo = new RejectVisitDto();
       rechazo.razon = aceptPendingDto.razon;
-      await this.rejectVisit(visitId, rechazo)
-    }
-    else
-    {
-      // enviar notificación
+      await this.rejectVisit(visitId, rechazo);
+    } else {
+      if (updatedVisit.recepcionistaId) {
+        this.eventEmitter.emit(
+          'visit.pending.approved',
+          new VisitPendingApprovedEvent(
+            updatedVisit.id,
+            updatedVisit.recepcionistaId,
+            updatedVisit.nombreVisitante,
+            updatedVisit.autorizante.name,
+          ),
+        );
+      }
     }
   }
 }
