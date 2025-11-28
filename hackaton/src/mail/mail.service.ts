@@ -131,6 +131,11 @@ export class MailService {
       year: 'numeric',
     });
 
+    const logoUrl = this.configService.get<string>(
+      'MAIL_LOGO_URL',
+      'https://politicacordobaverdad.com.ar/wp-content/uploads/2025/03/logo-loteria-de-cordoba.jpg',
+    );
+
     return `
       <!DOCTYPE html>
       <html>
@@ -150,6 +155,15 @@ export class MailService {
             border-radius: 10px;
             padding: 30px;
             border: 1px solid #e0e0e0;
+          }
+          .logo {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .logo img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 8px;
           }
           .header {
             background-color: #4CAF50;
@@ -202,6 +216,10 @@ export class MailService {
       </head>
       <body>
         <div class="container">
+          <div class="logo">
+            <img src="${logoUrl}" alt="Logo Sistema de Visitas" />
+          </div>
+          
           <div class="header">
             <h1>🔔 Visitante en Recepción</h1>
           </div>
