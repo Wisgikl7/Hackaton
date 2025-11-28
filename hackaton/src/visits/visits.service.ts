@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateVisitDto, CheckInVisitDto, QueryVisitsDto, RejectVisitDto } from './dto';
+import {
+  CreateVisitDto,
+  CheckInVisitDto,
+  QueryVisitsDto,
+  RejectVisitDto,
+} from './dto';
 import {
   VisitCheckInEvent,
   VisitApprovedEvent,
@@ -19,11 +24,7 @@ export class VisitsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  /**
-   * RF-BE 1 – Crear visita pre-autorizada
-   */
   async createVisit(createVisitDto: CreateVisitDto) {
-    // Verificar que el autorizante existe
     const autorizante = await this.prisma.user.findUnique({
       where: { id: createVisitDto.autorizanteId },
     });
@@ -56,9 +57,6 @@ export class VisitsService {
     return visit;
   }
 
-  /**
-   * RF-BE 2 – Consultar estado de visita por autorizante
-   */
   async getVisitsByAutorizante(autorizanteId: string) {
     return this.prisma.visit.findMany({
       where: {
@@ -79,9 +77,6 @@ export class VisitsService {
     });
   }
 
-  /**
-   * RF-BE 3 – Listado diario para Recepción
-   */
   async getDailyVisits(queryDto: QueryVisitsDto) {
     const today = queryDto.fecha ? new Date(queryDto.fecha) : new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -94,14 +89,12 @@ export class VisitsService {
       },
     };
 
-    // Filtrar por estados si se proporciona
     if (queryDto.estado) {
       const estados = queryDto.estado.split(',').map((e) => e.trim());
       where.estado = {
         in: estados,
       };
     } else {
-      // Por defecto, mostrar PRE_AUTORIZADA y EN_RECEPCION
       where.estado = {
         in: ['PRE_AUTORIZADA', 'EN_RECEPCION'],
       };
@@ -124,10 +117,6 @@ export class VisitsService {
     });
   }
 
-  /**
-   * RF-BE 4 – Check-in rápido
-   * RF-BE 5 – Notificación inmediata (mediante eventos)
-   */
   async markCheckIn(visitId: string, checkInDto: CheckInVisitDto) {
     const visit = await this.prisma.visit.findUnique({
       where: { id: visitId },
@@ -166,7 +155,6 @@ export class VisitsService {
       },
     });
 
-    // Emitir evento para notificaciones
     this.eventEmitter.emit(
       'visit.checkin',
       new VisitCheckInEvent(
@@ -182,9 +170,6 @@ export class VisitsService {
     return updatedVisit;
   }
 
-  /**
-   * RF-BE 6 – Aprobación
-   */
   async approveVisit(visitId: string) {
     const visit = await this.prisma.visit.findUnique({
       where: { id: visitId },
@@ -219,7 +204,6 @@ export class VisitsService {
       },
     });
 
-    // Emitir evento
     this.eventEmitter.emit(
       'visit.approved',
       new VisitApprovedEvent(
@@ -232,9 +216,6 @@ export class VisitsService {
     return updatedVisit;
   }
 
-  /**
-   * RF-BE 6 – Rechazo
-   */
   async rejectVisit(visitId: string, rejectDto: RejectVisitDto) {
     const visit = await this.prisma.visit.findUnique({
       where: { id: visitId },
@@ -270,7 +251,6 @@ export class VisitsService {
       },
     });
 
-    // Emitir evento con razón del rechazo
     this.eventEmitter.emit(
       'visit.rejected',
       new VisitRejectedEvent(
@@ -287,9 +267,6 @@ export class VisitsService {
     return updatedVisit;
   }
 
-  /**
-   * Obtener una visita por ID
-   */
   async getVisitById(visitId: string) {
     const visit = await this.prisma.visit.findUnique({
       where: { id: visitId },

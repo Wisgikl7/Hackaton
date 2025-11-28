@@ -47,8 +47,6 @@ export class VisitNotificationsListener {
     this.logger.log(`[APROBADA] Visita de ${event.nombreVisitante} aprobada`);
     this.logger.log(`Visita ID: ${event.visitaId}`);
     this.logger.log(`Autorizante ID: ${event.autorizanteId}`);
-
-    await this.simulateNotificationSending(event);
   }
 
   @OnEvent('visit.rejected')
@@ -76,14 +74,5 @@ export class VisitNotificationsListener {
     } else {
       this.logger.warn('⚠️  No hay recepcionista asignado, no se envió email');
     }
-  }
-
-  private async simulateNotificationSending(event: any): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.logger.debug('Notificación enviada exitosamente');
-        resolve();
-      }, 100);
-    });
   }
 }

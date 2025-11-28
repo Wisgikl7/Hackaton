@@ -16,12 +16,11 @@ export class MailService {
     const mailUser = this.configService.get<string>('MAIL_USER');
     const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
 
-    // Solo crear transporter si hay credenciales configuradas
     if (mailUser && mailPassword) {
       this.transporter = nodemailer.createTransport({
         host: this.configService.get<string>('MAIL_HOST', 'smtp.gmail.com'),
         port: this.configService.get<number>('MAIL_PORT', 587),
-        secure: false, // true for 465, false for other ports
+        secure: false,
         auth: {
           user: mailUser,
           pass: mailPassword,
@@ -32,14 +31,10 @@ export class MailService {
       this.logger.warn(
         '⚠️  Credenciales de email no configuradas. Usando cuenta de prueba de Ethereal...',
       );
-      // Crear cuenta de prueba automática con Ethereal (integrado en Nodemailer)
       this.createTestAccount();
     }
   }
 
-  /**
-   * Crear cuenta de prueba de Ethereal (solo para desarrollo)
-   */
   private async createTestAccount() {
     try {
       const testAccount = await nodemailer.createTestAccount();
@@ -65,9 +60,6 @@ export class MailService {
     }
   }
 
-  /**
-   * Enviar email de notificación de check-in al autorizante
-   */
   async sendCheckInNotification(
     autorizanteEmail: string,
     autorizanteName: string,
@@ -75,7 +67,6 @@ export class MailService {
     fechaHoraLlegada: Date,
     visitaId: string,
   ): Promise<void> {
-    // Si no hay transporter configurado, solo logear
     if (!this.transporter) {
       this.logger.warn(
         `📧 [SIMULADO] Email de check-in a ${autorizanteEmail} (${autorizanteName}) para visitante ${nombreVisitante}`,
@@ -102,7 +93,6 @@ export class MailService {
       await this.transporter.sendMail(mailOptions);
       this.logger.log(`✅ Email de check-in enviado a ${autorizanteEmail}`);
 
-      // Si es cuenta de prueba de Ethereal, mostrar link
       const previewUrl = nodemailer.getTestMessageUrl(mailOptions as any);
       if (previewUrl) {
         this.logger.log(`🔗 Ver email en: ${previewUrl}`);
@@ -116,9 +106,6 @@ export class MailService {
     }
   }
 
-  /**
-   * Template HTML para email de check-in
-   */
   private getCheckInEmailTemplate(
     autorizanteName: string,
     nombreVisitante: string,
@@ -263,9 +250,6 @@ export class MailService {
     `;
   }
 
-  /**
-   * Enviar email de aprobación de visita
-   */
   async sendApprovedNotification(
     autorizanteEmail: string,
     nombreVisitante: string,
@@ -295,9 +279,6 @@ export class MailService {
     }
   }
 
-  /**
-   * Enviar email de rechazo de visita
-   */
   async sendRejectedNotification(
     autorizanteEmail: string,
     nombreVisitante: string,
@@ -327,16 +308,12 @@ export class MailService {
     }
   }
 
-  /**
-   * Enviar email al recepcionista cuando una visita es rechazada
-   */
   async sendRejectionToReceptionist(
     recepcionistaId: string,
     nombreVisitante: string,
     autorizanteName: string,
     razon: string,
   ): Promise<void> {
-    // Si no hay transporter configurado, solo logear
     if (!this.transporter) {
       this.logger.warn(
         `📧 [SIMULADO] Email de rechazo al recepcionista para visitante ${nombreVisitante}`,
@@ -345,7 +322,6 @@ export class MailService {
     }
 
     try {
-      // Buscar el email del recepcionista
       const recepcionista = await this.prisma.user.findUnique({
         where: { id: recepcionistaId },
         select: { email: true, name: true },
@@ -486,7 +462,6 @@ export class MailService {
         `✅ Email de rechazo enviado al recepcionista ${recepcionista.email}`,
       );
 
-      // Si es cuenta de prueba de Ethereal, mostrar link
       const previewUrl = nodemailer.getTestMessageUrl(mailOptions as any);
       if (previewUrl) {
         this.logger.log(`🔗 Ver email en: ${previewUrl}`);
