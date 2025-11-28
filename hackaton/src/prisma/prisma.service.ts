@@ -1,28 +1,19 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
-
-  get client() {
-    return this.prisma;
-  }
-
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
-    await this.prisma.$connect();
+    await this.$connect();
   }
 
   async onModuleDestroy() {
-    await this.prisma.$disconnect();
+    await this.$disconnect();
   }
 
-  // Métodos proxy para usar directamente el servicio
-  get user() {
-    return this.prisma.user;
+  async enableShutdownHooks(app: INestApplication) {
+    process.on('beforeExit', async () => {
+      await app.close();
+    });
   }
 }
