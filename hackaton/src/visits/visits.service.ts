@@ -30,6 +30,7 @@ export class VisitsService {
     const autorizante = await this.prisma.user.findUnique({
       where: { id: createVisitDto.autorizanteId },
     });
+    var recepcionista = null;
 
     if (!autorizante) {
       throw new NotFoundException('Autorizante no encontrado');
@@ -39,7 +40,7 @@ export class VisitsService {
 
     if (createVisitDto.recepcionistaId != null)
     {
-      const recepcionista = await this.prisma.user.findUnique({
+       recepcionista = await this.prisma.user.findUnique({
         where: {id : createVisitDto.recepcionistaId}
       });
 
@@ -73,13 +74,6 @@ export class VisitsService {
             email: true,
           },
         },
-        recepcionista: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        },
       },
     });
 
@@ -95,7 +89,7 @@ export class VisitsService {
           visit.nombreVisitante,
           fechaHoraLlegada,
           visit.recepcionistaId,
-          visit.recepcionista.name
+          recepcionista.name
         ),
       );
     }
@@ -332,5 +326,31 @@ export class VisitsService {
     }
 
     return visit;
+  }
+
+  async validarVisitaPendiente(aceptar: boolean, visitId: string, razonRechazo: RejectVisitDto)
+  {
+    const visit = await this.getVisitById(visitId);
+    
+    await this.prisma.visit.update({
+      where: { id: visit.id },
+      data: {
+        estado: VisitStatus.EN_RECEPCION,
+      },
+      include: {
+        autorizante: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!aceptar)
+    {
+      await this.rejectVisit(visitId, razonRechazo)
+    }
   }
 }
